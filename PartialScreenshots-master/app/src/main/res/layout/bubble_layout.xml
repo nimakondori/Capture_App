@@ -10,5 +10,5 @@
         android:layout_height="wrap_content"
         android:contentDescription="@string/screenshot"
         android:onTouch="@{handler::onTouch}"
-        android:src="@drawable/ic_camera_alt_black_24dp" />
+         />
 </layout>

@@ -5,6 +5,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.hardware.display.DisplayManager;
@@ -24,6 +25,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -93,9 +95,13 @@ public class BubbleService extends Service {
         mBubbleLayoutBinding = BubbleLayoutBinding.inflate(layoutInflater);
         if (mBubbleLayoutParams == null) {
             mBubbleLayoutParams = buildLayoutParamsForBubble(60, 60);
+            mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_camera_alt_black_24dp));
+//          Can't set the background color of the icon for some reason
+
         }
         mBubbleLayoutBinding.setHandler(new BubbleHandler(this));
         getWindowManager().addView(mBubbleLayoutBinding.getRoot(), mBubbleLayoutParams);
+
     }
 
     private WindowManager getWindowManager() {
@@ -141,7 +147,10 @@ public class BubbleService extends Service {
         WindowManager.LayoutParams mClipLayoutParams = buildLayoutParamsForClip();
         ((ClipView)mClipLayoutBinding.getRoot()).updateRegion(0, 0, 0, 0);
         //mBubbleLayoutBinding.getRoot().setVisibility(View.INVISIBLE);    //This is when you are taking the screenshot. You can set the visibility to Gone to get rid of the Bubble
-        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_launcher_round ));
+        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_stop_black_24dp ));
+
+
+
         getWindowManager().addView(mClipLayoutBinding.getRoot(), mClipLayoutParams);
         Toast.makeText(this,"Start clip mode.",Toast.LENGTH_SHORT).show();
     }
@@ -156,7 +165,7 @@ public class BubbleService extends Service {
         } else {
             screenshot(clipRegion);
         }
-        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_camera_alt_black_24dp));
+        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_camera_alt_black_36dp));
     }
 
     public void screenshot(int[] clipRegion) {

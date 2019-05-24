@@ -1,6 +1,7 @@
 package murmur.partialscreenshots;
 
 import android.provider.Settings;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -40,7 +41,8 @@ public class ClipHandler {
     }
 
     public boolean onTouch(View view, MotionEvent event) {
-        GLOBAL.stop = !GLOBAL.stop;
+
+        Log.d("Nima", "onTouch: stop:"+ GLOBAL.stop);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 x1  = event.getX();
@@ -58,6 +60,7 @@ public class ClipHandler {
                 break;
             case MotionEvent.ACTION_UP:
                 view.performClick();
+                GLOBAL.stop = !GLOBAL.stop;
                 service.finishClipMode(clipBox);
                 break;
         }

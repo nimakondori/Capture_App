@@ -149,11 +149,11 @@
                                   </option>
                                   <option name="values">
                                     <map>
-                                      <entry key="assetType" value="IMAGE" />
+                                      <entry key="backgroundColor" value="ff252d" />
                                       <entry key="cropped" value="true" />
                                       <entry key="iconShape" value="CIRCLE" />
                                       <entry key="imageAsset" value="C:\Users\Nima\Downloads\Background images\Vector Images\trash.png" />
-                                      <entry key="outputName" value="trash_icon" />
+                                      <entry key="outputName" value="stop_recording" />
                                     </map>
                                   </option>
                                 </PersistentState>

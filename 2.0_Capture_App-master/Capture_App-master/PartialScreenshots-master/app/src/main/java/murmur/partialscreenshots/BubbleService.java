@@ -52,6 +52,8 @@ class GLOBAL
 
 {
     static boolean stop = false;
+    static boolean hasBeenRunning = false;
+
 
 }
 public class BubbleService extends Service {
@@ -149,8 +151,12 @@ public class BubbleService extends Service {
         //mBubbleLayoutBinding.getRoot().setVisibility(View.INVISIBLE);    //This is when you are taking the screenshot. You can set the visibility to Gone to get rid of the Bubble
         mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.stop_recording));
 
-
-        getWindowManager().addView(mClipLayoutBinding.getRoot(), mClipLayoutParams);
+        if(!GLOBAL.hasBeenRunning) {
+            getWindowManager().addView(mClipLayoutBinding.getRoot(), mClipLayoutParams);
+        }
+        else
+            mClipLayoutBinding.getRoot().setVisibility(View.VISIBLE);
+        GLOBAL.hasBeenRunning = true; //This is so that startclipmode does not throw an exception for the add.view method next time
         Toast.makeText(this, "Start clip mode.", Toast.LENGTH_SHORT).show();
     }
 
@@ -167,6 +173,8 @@ public class BubbleService extends Service {
             stopSelf();
         } else {
             screenshot(clipRegion);
+            mClipLayoutBinding.getRoot().setVisibility(View.GONE);
+
         }
         mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.video_camera));
     }
@@ -184,23 +192,25 @@ public class BubbleService extends Service {
                     if (sMediaProjection != null) {
                                 shotScreen(clipRegion);
                                 Log.d("Nima", "run: screenshot in runnable");
-                                Log.d("nima", "stop :" + GLOBAL.stop);
+                                Log.d("Nima", "stop :" + GLOBAL.stop);
                     }
                             else break;
                 }
+
             }
         };
 
             Thread myThread = new Thread(myRunnable);
             myThread.start();
-            if (mClipLayoutBinding != null) {
-                mWindowManager.removeView(mClipLayoutBinding.getRoot());
-                return;
-            } else {
-                Toast.makeText(this,
-                        "No MediaProjection, stop bubble.", Toast.LENGTH_LONG).show();
-                stopSelf();
-            }
+            //if (mClipLayoutBinding != null) {
+              //  mWindowManager.removeView(mClipLayoutBinding.getRoot());
+               // return;
+            //} else {
+             //   Toast.makeText(this,
+              //          "No MediaProjection, stop bubble.", Toast.LENGTH_LONG).show();
+               // stopSelf();
+         //   }
+
         }
     @SuppressLint("CheckResult")
     private void shotScreen(int[] clipRegion) {
@@ -232,6 +242,8 @@ public class BubbleService extends Service {
                         }
                 );
     }
+
+
 
     private void finalRelease() {
         if (virtualDisplay != null) {

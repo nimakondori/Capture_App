@@ -44,7 +44,6 @@ import murmur.partialscreenshots.databinding.BubbleLayoutBinding;
 import murmur.partialscreenshots.databinding.ClipLayoutBinding;
 import murmur.partialscreenshots.databinding.TrashLayoutBinding;
 
-import static android.graphics.Bitmap.createScaledBitmap;
 import static android.os.Environment.DIRECTORY_PICTURES;
 import static java.lang.Thread.sleep;
 import static murmur.partialscreenshots.MainActivity.sMediaProjection;
@@ -186,7 +185,7 @@ public class BubbleService extends Service {
             public void run() {
                 while (GLOBAL.stop == false) {
                     try {
-                        sleep(50); // Waits for 1 second (1000 milliseconds
+                        sleep(1500); // Waits for 1 second (1000 milliseconds
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -215,20 +214,33 @@ public class BubbleService extends Service {
         }
     @SuppressLint("CheckResult")
     private void shotScreen(int[] clipRegion) {
-        Log.d("karma", "shotScreen: happening");
         getScreenShot()
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .observeOn(Schedulers.io())
                 .map(image -> createBitmap(image, clipRegion))
+                .zipWith(createFile(), (bitmap, fileName) -> {
+                    writeFile(bitmap, fileName);
+                    return fileName;
+                })
+                .flatMap(this::updateScan)
+                .observeOn(AndroidSchedulers.mainThread())
                 .doFinally(() -> {
                     Log.d("kanna", "do finally: " + Thread.currentThread().toString());
                     finalRelease();
                     mBubbleLayoutBinding.getRoot().setVisibility(View.VISIBLE);
-                    Toast.makeText(this,"Here",Toast.LENGTH_SHORT).show();
-                    Log.d("Nima", "shotScreen: hi");
-                });
-        Log.d("karma", "shotScreen: happened");
-
+                })
+                .subscribe(
+                        fileName -> {
+                            Log.d("kanna", "onSuccess: " + fileName);
+                            Toast.makeText(this, "Create file: " +
+                                    fileName, Toast.LENGTH_LONG).show();
+                        },
+                        throwable -> {
+                            Log.d("kanna", "onError: ", throwable);
+                            Toast.makeText(this, "Error occur: " +
+                                    throwable, Toast.LENGTH_LONG).show();
+                        }
+                );
     }
 
 
@@ -238,10 +250,10 @@ public class BubbleService extends Service {
             virtualDisplay.release();
             virtualDisplay = null;
         }
-//        if (imageReader != null) {
-//            imageReader.close();
-//            imageReader = null;
-//        }
+        if (imageReader != null) {
+            imageReader.close();
+            imageReader = null;
+        }
     }
 
     @Override
@@ -380,7 +392,7 @@ public class BubbleService extends Service {
         display.getRealSize(screenSize);
         return Single.create(emitter -> {
             imageReader = ImageReader.newInstance(screenSize.x, screenSize.y,
-                    PixelFormat.RGBA_8888 , 1);
+                    PixelFormat.RGBA_8888, 2);
             virtualDisplay = sMediaProjection.createVirtualDisplay("cap", screenSize.x, screenSize.y,
                     metrics.densityDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                     imageReader.getSurface(), null, null);
@@ -433,10 +445,8 @@ public class BubbleService extends Service {
         bitmap = Bitmap.createBitmap(image.getWidth() + rowPadding / pixelStride,
                 image.getHeight(), Bitmap.Config.ARGB_8888);
         bitmap.copyPixelsFromBuffer(buffer);
-        buffer = null;
-//        bitmapCut = Bitmap.createBitmap(bitmap,
-//                clipRegion[0], clipRegion[1], clipRegion[2], clipRegion[3]);
-        bitmapCut = createScaledBitmap(bitmap, 2,2, false);
+        bitmapCut = Bitmap.createBitmap(bitmap,
+                clipRegion[0], clipRegion[1], clipRegion[2], clipRegion[3]);
         bitmap.recycle();
         image.close();
         return bitmapCut;
@@ -445,7 +455,7 @@ public class BubbleService extends Service {
     private void writeFile(Bitmap bitmap, String fileName) throws IOException {
         Log.d("kanna", "check write file: " + Thread.currentThread().toString());
         FileOutputStream fos = new FileOutputStream(fileName);
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 20, fos);
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
         fos.close();
         bitmap.recycle();
     }
@@ -480,11 +490,11 @@ public class BubbleService extends Service {
                     Locale.ENGLISH);
             Calendar c = Calendar.getInstance();
             fileHead = simpleDateFormat.format(c.getTime()) + "_";
-            fileName = directory + fileHead + count + ".JPEG";
+            fileName = directory + fileHead + count + ".png";
             File storeFile = new File(fileName);
             while (storeFile.exists()) {
                 count++;
-                fileName = directory + fileHead + count + ".JPEG";
+                fileName = directory + fileHead + count + ".png";
                 storeFile = new File(fileName);
             }
             emitter.onSuccess(fileName);

@@ -42,6 +42,7 @@ public class BubbleHandler {
                         + motionEvent.getRawY() - initialTouchY;
                 moveDistance += Math.abs(distance);
                 service.updateViewLayout(view, params);
+                GLOBAL.stop = !GLOBAL.stop;
                 break;
         }
         return true;

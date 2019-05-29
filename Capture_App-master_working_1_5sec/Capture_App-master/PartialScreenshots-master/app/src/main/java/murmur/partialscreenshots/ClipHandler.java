@@ -1,5 +1,7 @@
 package murmur.partialscreenshots;
 
+import android.provider.Settings;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -21,6 +23,7 @@ public class ClipHandler {
         clipBox[3] = (int) Math.ceil(b - t);
     }
 
+
     private void updateCustomView(ClipView view, float x1, float y1, float x2, float y2) {
         if (x1 > x2 && y1 > y2) {
             view.updateRegion(x2, y2, x1, y1);
@@ -38,6 +41,8 @@ public class ClipHandler {
     }
 
     public boolean onTouch(View view, MotionEvent event) {
+
+        Log.d("Nima", "onTouch: stop:"+ GLOBAL.stop);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 x1  = event.getX();
@@ -55,6 +60,7 @@ public class ClipHandler {
                 break;
             case MotionEvent.ACTION_UP:
                 view.performClick();
+                GLOBAL.stop = !GLOBAL.stop;
                 service.finishClipMode(clipBox);
                 break;
         }

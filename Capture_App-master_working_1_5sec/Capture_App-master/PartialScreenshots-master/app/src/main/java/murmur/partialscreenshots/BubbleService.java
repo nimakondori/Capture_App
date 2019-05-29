@@ -45,12 +45,16 @@ import murmur.partialscreenshots.databinding.ClipLayoutBinding;
 import murmur.partialscreenshots.databinding.TrashLayoutBinding;
 
 import static android.os.Environment.DIRECTORY_PICTURES;
+import static java.lang.Thread.sleep;
 import static murmur.partialscreenshots.MainActivity.sMediaProjection;
 
 class GLOBAL
 
 {
-    static int captured_pics=0;
+    static boolean stop = false;
+    static boolean hasBeenRunning = false;
+
+
 }
 public class BubbleService extends Service {
     private WindowManager mWindowManager;
@@ -71,18 +75,17 @@ public class BubbleService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("kanna","onStart");
-        if(sMediaProjection != null){
-            Log.d("kanna","mediaProjection alive");
+        Log.d("kanna", "onStart");
+        if (sMediaProjection != null) {
+            Log.d("kanna", "mediaProjection alive");
         }
         initial();
         return super.onStartCommand(intent, flags, startId);
     }
 
 
-
     private void initial() {
-        Log.d("kanna","initial");
+        Log.d("kanna", "initial");
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         mTrashLayoutBinding = TrashLayoutBinding.inflate(layoutInflater);
         if (mTrashLayoutParams == null) {
@@ -91,11 +94,10 @@ public class BubbleService extends Service {
         }
         getWindowManager().addView(mTrashLayoutBinding.getRoot(), mTrashLayoutParams);
         mTrashLayoutBinding.getRoot().setVisibility(View.GONE);
-
         mBubbleLayoutBinding = BubbleLayoutBinding.inflate(layoutInflater);
         if (mBubbleLayoutParams == null) {
             mBubbleLayoutParams = buildLayoutParamsForBubble(60, 60);
-            mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_camera_alt_black_24dp));
+            mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.video_camera));
 //          Can't set the background color of the icon for some reason
 
         }
@@ -106,7 +108,7 @@ public class BubbleService extends Service {
 
     private WindowManager getWindowManager() {
         if (mWindowManager == null) {
-            mWindowManager = (WindowManager)getSystemService(WINDOW_SERVICE);
+            mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         }
         return mWindowManager;
     }
@@ -136,8 +138,8 @@ public class BubbleService extends Service {
     }
 
     public void startClipMode() {
+        GLOBAL.stop = true;
         mTrashLayoutBinding.getRoot().setVisibility(View.GONE);
-        GLOBAL.captured_pics = 0;
         isClipMode = true;
         if (mClipLayoutBinding == null) {
             LayoutInflater layoutInflater = LayoutInflater.from(this);
@@ -145,14 +147,17 @@ public class BubbleService extends Service {
             mClipLayoutBinding.setHandler(new ClipHandler(this));
         }
         WindowManager.LayoutParams mClipLayoutParams = buildLayoutParamsForClip();
-        ((ClipView)mClipLayoutBinding.getRoot()).updateRegion(0, 0, 0, 0);
+        ((ClipView) mClipLayoutBinding.getRoot()).updateRegion(0, 0, 0, 0);
         //mBubbleLayoutBinding.getRoot().setVisibility(View.INVISIBLE);    //This is when you are taking the screenshot. You can set the visibility to Gone to get rid of the Bubble
-        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_stop_black_24dp ));
+        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.stop_recording));
 
-
-
-        getWindowManager().addView(mClipLayoutBinding.getRoot(), mClipLayoutParams);
-        Toast.makeText(this,"Start clip mode.",Toast.LENGTH_SHORT).show();
+        if(!GLOBAL.hasBeenRunning) {
+            getWindowManager().addView(mClipLayoutBinding.getRoot(), mClipLayoutParams);
+        }
+        else
+            mClipLayoutBinding.getRoot().setVisibility(View.VISIBLE);
+        GLOBAL.hasBeenRunning = true; //This is so that startclipmode does not throw an exception for the add.view method next time
+        Toast.makeText(this, "Start clip mode.", Toast.LENGTH_SHORT).show();
     }
 
     public void finishClipMode(int[] clipRegion) {
@@ -160,40 +165,53 @@ public class BubbleService extends Service {
         //getWindowManager().removeView(mClipLayoutBinding.getRoot());    //This is the clip region view where you choose to take the screenshot.
         // By not removing the view the box will stay on the screen indefinitely
         if (clipRegion[2] < 50 || clipRegion[3] < 50) {
-            Toast.makeText(this,"Region is too small.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Region is too small. Try Again", Toast.LENGTH_SHORT).show();
             mBubbleLayoutBinding.getRoot().setVisibility(View.VISIBLE);
+            mClipLayoutBinding.getRoot().setVisibility(View.GONE);
+            mBubbleLayoutBinding.getRoot().setVisibility(View.GONE);
+            finalRelease();
+            stopSelf();
         } else {
             screenshot(clipRegion);
+            mClipLayoutBinding.getRoot().setVisibility(View.GONE);
+
         }
-        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.ic_camera_alt_black_36dp));
+        mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.video_camera));
     }
 
     public void screenshot(int[] clipRegion) {
-        if (sMediaProjection != null) {
-            shotScreen(clipRegion);
-            new CountDownTimer(1000, 1000) {
-                public void onFinish() {
-                    // When timer is finished
-                    GLOBAL.captured_pics++;
-                    if(GLOBAL.captured_pics>3)
-                    {
-                        if (mClipLayoutBinding != null)
-                                mWindowManager.removeView(mClipLayoutBinding.getRoot());
-                        return;
+        Runnable myRunnable = new Runnable() {
+            @Override
+            public void run() {
+                while (GLOBAL.stop == false) {
+                    try {
+                        sleep(1500); // Waits for 1 second (1000 milliseconds
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
-                    screenshot(clipRegion);
+                    if (sMediaProjection != null) {
+                                shotScreen(clipRegion);
+                                Log.d("Nima", "run: screenshot in runnable");
+                                Log.d("Nima", "stop :" + GLOBAL.stop);
+                    }
+                            else break;
                 }
-                public void onTick(long millisUntilFinished) {
-                    // millisUntilFinished    The amount of time until finished.
-                }
-            }.start();
-        } else {
-            Toast.makeText(this,
-                    "No MediaProjection, stop bubble.", Toast.LENGTH_LONG).show();
-            stopSelf();
-        }
-    }
 
+            }
+        };
+
+            Thread myThread = new Thread(myRunnable);
+            myThread.start();
+            //if (mClipLayoutBinding != null) {
+              //  mWindowManager.removeView(mClipLayoutBinding.getRoot());
+               // return;
+            //} else {
+             //   Toast.makeText(this,
+              //          "No MediaProjection, stop bubble.", Toast.LENGTH_LONG).show();
+               // stopSelf();
+         //   }
+
+        }
     @SuppressLint("CheckResult")
     private void shotScreen(int[] clipRegion) {
         getScreenShot()
@@ -224,6 +242,8 @@ public class BubbleService extends Service {
                         }
                 );
     }
+
+
 
     private void finalRelease() {
         if (virtualDisplay != null) {
@@ -266,7 +286,6 @@ public class BubbleService extends Service {
             sMediaProjection.stop();
             sMediaProjection = null;
         }
-        GLOBAL.captured_pics = 0;
         super.onDestroy();
     }
 

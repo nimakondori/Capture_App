@@ -53,6 +53,8 @@ public class MainActivity extends AppCompatActivity {
                 checkWritePermission();
                 return;
             }
+            GLOBAL.stop = true;
+            GLOBAL.hasBeenRunning = false;
             startMediaProjection();
         });
     }
@@ -87,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
+       @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
             case MY_PERMISSIONS_REQUEST_READ_CONTACTS:
                 if (grantResults.length > 0
@@ -101,29 +103,37 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE) {
-            sMediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
-            if (sMediaProjection == null) {
-                Log.d("kanna", "not get permission of media projection");
-                Toast.makeText(this, "Need MediaProjection", Toast.LENGTH_LONG).show();
-                startMediaProjection();
-            } else {
-                startBubble();
+            if (requestCode == REQUEST_CODE) {
+                sMediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
+                if (sMediaProjection == null) {
+                    Log.d("kanna", "not get permission of media projection");
+                    Toast.makeText(this, "Need MediaProjection", Toast.LENGTH_LONG).show();
+                    startMediaProjection();
+                } else {
+                    startBubble();
+                }
             }
-        }
+
     }
 
     @Override
     protected void onResume(){
         super.onResume();
-        if (sMediaProjection == null) {
-            binding.test.setVisibility(View.VISIBLE);
-        }
+//        if (sMediaProjection == null) {
+          if(GLOBAL.hasBeenRunning) {
+              binding.test.setVisibility(View.VISIBLE);
+// ============================================================== When the app resumes just stop any possible services running previously ===================================================================
+// ===================================================== Since the binding button is visible, the user can click and start the service all over again =======================================================
+// ===================================================================== remember it only happens if the MediaPorjection is Null ============================================================================
+              Intent intent = new Intent(this, BubbleService.class);
+              stopService(intent);
+              GLOBAL.stop = true;
+          }
+//        }
     }
 
     private void startBubble() {
-        Log.d("kanna","start bubble");
-        binding.test.setVisibility(View.GONE);
+         binding.test.setVisibility(View.GONE);
         Intent intent = new Intent(this, BubbleService.class);
         stopService(intent);
         startService(intent);

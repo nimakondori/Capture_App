@@ -47,7 +47,7 @@ import static murmur.partialscreenshots.MainActivity.sMediaProjection;
 
 class GLOBAL
 {
-    static boolean stop = false;
+    static boolean stop = true;
     static boolean hasBeenRunning = false;
 }
 
@@ -84,6 +84,8 @@ public class BubbleService extends Service {
     private void initial() {
         Log.d("kanna", "initial");
 
+
+//==================================================================== Inflate all the views and set their proper parameters and Handlers===============================================================================
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         mTrashLayoutBinding = TrashLayoutBinding.inflate(layoutInflater);
         mLayoutBottomSheetBinding = LayoutBottomSheetBinding.inflate(layoutInflater);
@@ -114,6 +116,8 @@ public class BubbleService extends Service {
         return mWindowManager;
     }
 
+//==================================================================== This is the function to decide whether trash layout disappears or not==========================================================================
+// It also allows you to stop the Service
     public void checkInCloseRegion(float x, float y) {
         if (closeRegion == null) {
             int[] location = new int[2];
@@ -127,6 +131,7 @@ public class BubbleService extends Service {
                 Float.compare(y, closeRegion[1]) >= 0 &&
                 Float.compare(x, closeRegion[2]) <= 0 &&
                 Float.compare(3, closeRegion[3]) <= 0) {
+            GLOBAL.stop = true;
             stopSelf();
         } else {
             mTrashLayoutBinding.getRoot().setVisibility(View.GONE);
@@ -152,17 +157,20 @@ public class BubbleService extends Service {
         //mBubbleLayoutBinding.getRoot().setVisibility(View.INVISIBLE);    //This is when you are taking the screenshot. You can set the visibility to Gone to get rid of the Bubble
         mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.stop_recording));
 
+
+        //This is so that startClipMode does not throw an exception for the add.view method next time
         if(!GLOBAL.hasBeenRunning) {
             getWindowManager().addView(mClipLayoutBinding.getRoot(), mClipLayoutParams);
         }
         else
             mClipLayoutBinding.getRoot().setVisibility(View.VISIBLE);
-        GLOBAL.hasBeenRunning = true; //This is so that startclipmode does not throw an exception for the add.view method next time
+        GLOBAL.hasBeenRunning = true;
         Toast.makeText(this, "Start clip mode.", Toast.LENGTH_SHORT).show();
     }
 
     public void finishClipMode(int[] clipRegion) {
         isClipMode = false;
+        GLOBAL.stop = false;
         //getWindowManager().removeView(mClipLayoutBinding.getRoot());    //This is the clip region view where you choose to take the screenshot.
         // By not removing the view the box will stay on the screen indefinitely
         if (clipRegion[2] < 50 || clipRegion[3] < 50) {
@@ -172,11 +180,11 @@ public class BubbleService extends Service {
             mBubbleLayoutBinding.getRoot().setVisibility(View.GONE);
             mLayoutBottomSheetBinding.getRoot().setVisibility(View.GONE);
             finalRelease();
+            GLOBAL.stop = true;
             stopSelf();
         } else {
             screenshot(clipRegion);
             mClipLayoutBinding.getRoot().setVisibility(View.GONE);
-
         }
         mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.video_camera));
     }
@@ -184,7 +192,6 @@ public class BubbleService extends Service {
     public void screenshot(int[] clipRegion){
         mLayoutBottomSheetBinding.getRoot().setVisibility(View.VISIBLE);
         mLayoutBottomSheetBinding.setHandler(new BottomSheetHandler(this));
-
 
         Runnable myRunnable = new Runnable() {
             @Override
@@ -288,9 +295,7 @@ public class BubbleService extends Service {
                 mWindowManager.removeView(mTrashLayoutBinding.getRoot());
             }
             if (mClipLayoutBinding != null) {
-                if (GLOBAL.stop) {
-                    mWindowManager.removeView(mClipLayoutBinding.getRoot());
-                }
+                mWindowManager.removeView(mClipLayoutBinding.getRoot());
             }
             if (mLayoutBottomSheetBinding != null) {
                 mWindowManager.removeView(mLayoutBottomSheetBinding.getRoot());

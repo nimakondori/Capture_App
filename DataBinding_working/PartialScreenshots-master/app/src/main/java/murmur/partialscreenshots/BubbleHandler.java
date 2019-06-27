@@ -1,5 +1,6 @@
 package murmur.partialscreenshots;
 
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -29,8 +30,11 @@ public class BubbleHandler {
                 break;
             case MotionEvent.ACTION_UP:
                 view.performClick();
+                Log.d("Nima", "onTouch: GlobalStop " + GLOBAL.stop);
                 if (Float.compare(moveDistance, 100f) >= 0) {
                     service.checkInCloseRegion(motionEvent.getRawX(), motionEvent.getRawY());
+
+                    Log.e("Nima","GLOBAL.stop"+ GLOBAL.stop);
                 } else {
                     service.startClipMode();
                 }
@@ -42,7 +46,6 @@ public class BubbleHandler {
                         + motionEvent.getRawY() - initialTouchY;
                 moveDistance += Math.abs(distance);
                 service.updateViewLayout(view, params);
-                GLOBAL.stop = !GLOBAL.stop;
                 break;
         }
         return true;

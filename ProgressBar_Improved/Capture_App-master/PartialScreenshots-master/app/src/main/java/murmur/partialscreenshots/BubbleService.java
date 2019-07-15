@@ -78,7 +78,6 @@ public class BubbleService extends Service
     Vector res_std_vec = new Vector();
     private static final int FILTER_LENGTH = 35;
     private static float[] lastResults;
-    private static int lastPredView;
 
 
     // ======================================================================================= QUSRunner Variables ==================================================================================
@@ -578,18 +577,20 @@ public class BubbleService extends Service
 
                         }
 
+
                 }
         });
+        updateViewLayout(mLayoutBottomSheetBinding.getRoot(), mLayoutBottomSheetParams);
+        trashLayoutRemove();
     }
     private void displayResults (float filt_mean, float filt_std){
-    runInBackground(new Runnable() {
-        @Override
-        public void run() {
-            progressBar.setUncertainProgress(filt_mean, filt_std);
-        }
-    });
-}
-
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setUncertainProgress(filt_mean, filt_std);
+            }
+        });
+    }
     protected synchronized void runInBackground(final Runnable r) {
         if (handler != null) {                                          // handler.post, posts a message to the handler
             handler.post(r);                                            // .post is used to when you want to run some unknown code on UI thread

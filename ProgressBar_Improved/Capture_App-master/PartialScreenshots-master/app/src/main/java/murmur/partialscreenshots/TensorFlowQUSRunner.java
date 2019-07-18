@@ -49,7 +49,7 @@ public class TensorFlowQUSRunner implements Classifier {
 
     private static final String TAG = "nvw-quality";
     private static final boolean ATTEMPT_GPU = false;
-    private static final int NUM_VIEWQUAL_RUNNERS = 4;
+    private static final int NUM_VIEWQUAL_RUNNERS = 3;
 
     // Config values
     private int input_width, input_height, cine_length;
@@ -124,7 +124,7 @@ public class TensorFlowQUSRunner implements Classifier {
 
         // Nima: Hahaha
         // TODO: try this hsit out!
-        c.tfliteOptions.setNumThreads(3);
+       // c.tfliteOptions.setNumThreads(3);
 
 
         // Nima: Not going to attempt GPU
@@ -133,6 +133,7 @@ public class TensorFlowQUSRunner implements Classifier {
             Log.e(TAG, "Not attempting to include GPU support");
         }
         // Nima: What is this??
+        // NNAPI not available
         c.tfliteOptions.setUseNNAPI(false);
 
         // Load .tflite file and check its output sizes
@@ -239,8 +240,8 @@ public class TensorFlowQUSRunner implements Classifier {
     public void setRequestedView(int clicked_view) {
         // This is basically also QUSRunner.Start()
         // i.e. it needs to get called once and only once each new view
-        for (ViewQualRunner c : VQRs)
-            c.setRequestedView(clicked_view);
+//        for (ViewQualRunner c : VQRs)
+//            c.setRequestedView(clicked_view);
     }
 
     @Override
@@ -265,6 +266,12 @@ public class TensorFlowQUSRunner implements Classifier {
         //feature_buffer1 = null;
         //feature_buffer2 = null;
 
+    }
+    public void tempClose() {
+        // Notify all threads
+        for (ViewQualRunner c : VQRs) {
+            c.stopThread();
+        }
     }
 
     @Override

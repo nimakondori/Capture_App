@@ -114,7 +114,6 @@ public class BubbleService extends Service
     public static float filt_mean = 0, filt_std = 0;
 
     public BubbleService() {
-
     }
 
     @Override
@@ -135,7 +134,9 @@ public class BubbleService extends Service
 // ======================================================================= From TF Lite app to enable background image processing ========================================================
         handlerThread = new HandlerThread("Inference");
         handlerThread.start();
+//
         handler = new Handler(handlerThread.getLooper());
+//        handler = new Handler();
 // =======================================================================================================================================================================================
         return super.onStartCommand(intent, flags, startId);
     }
@@ -216,10 +217,10 @@ public class BubbleService extends Service
         ((ClipView) mClipLayoutBinding.getRoot()).updateRegion(0, 0, 0, 0);
         //mBubbleLayoutBinding.getRoot().setVisibility(View.INVISIBLE);    //This is when you are taking the screenshot. You can set the visibility to Gone to get rid of the Bubble
         mBubbleLayoutBinding.getRoot().setBackground(getDrawable(R.drawable.stop_recording));
-        if(QUSRunner != null) {
-            QUSRunner.clearLastResult();
-            //QUSRunner.close();
-        }
+//        if(QUSRunner != null) {
+//            QUSRunner.clearLastResult();
+//            QUSRunner.close();
+//        }
         //This is so that startClipMode does not throw an exception for the add.view method next time
         if(!GLOBAL.hasBeenRunning) {
             getWindowManager().addView(mClipLayoutBinding.getRoot(), mClipLayoutParams);
@@ -277,11 +278,8 @@ public class BubbleService extends Service
         mLayoutBottomSheetBinding.getRoot().setVisibility(View.VISIBLE);
 //        mLayoutBottomSheetBinding.setHandler(new BottomSheetHandler(this));
         mLayoutBottomSheetBinding.setResult(display_results);
+        shotScreen(clipRegion);
 
-//        if (!GLOBAL.stop)
-//        {
-            shotScreen(clipRegion);
-//        }
     }
     @SuppressLint("CheckResult")
     private void shotScreen(int[] clipRegion) {
@@ -474,6 +472,7 @@ public class BubbleService extends Service
             final DisplayMetrics metrics = getResources().getDisplayMetrics();
             Display display = getWindowManager().getDefaultDisplay();
             display.getRealSize(screenSize);
+
             imageReader = ImageReader.newInstance(screenSize.x, screenSize.y,
                     PixelFormat.RGBA_8888, 2);
             virtualDisplay = sMediaProjection.createVirtualDisplay("cap", screenSize.x, screenSize.y,
@@ -482,6 +481,7 @@ public class BubbleService extends Service
             ImageReader.OnImageAvailableListener mImageListener =
                     new ImageReader.OnImageAvailableListener() {
                         Image image;
+
                         @Override
                         public void onImageAvailable(ImageReader reader) {
                             try {
@@ -492,18 +492,15 @@ public class BubbleService extends Service
                                 if (image == null) {
                                     Log.d("Nima", "No image => Freak out");
                                 } else {
-                                    bitmapCut = createBitmap(image, clipRegion);
                                     GLOBAL.count++;
+                                    bitmapCut = createBitmap(image, clipRegion);
                                     Log.e("nima", "Count:" + GLOBAL.count);
                                     // The GLOBAL.stop is checked there to avoid the error when terminating the application
-                                    if(GLOBAL.isProcessDone && !GLOBAL.stop)
+                                    if (!GLOBAL.stop && GLOBAL.isProcessDone) {
                                         processImage(bitmapCut);
-                                    // This avoids weird jumps in displayed results
-                                    // Might need to be deleted if it actually causes inaccuracy in the results
+                                    }
                                     displayResults(filt_mean, filt_std);
-
                                 }
-
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
@@ -524,82 +521,66 @@ public class BubbleService extends Service
         bitmap.copyPixelsFromBuffer(buffer);
         bitmapCut = Bitmap.createBitmap(bitmap,
                 clipRegion[0], clipRegion[1], clipRegion[2], clipRegion[3]);
+        buffer.rewind();
         bitmap.recycle();
         image.close();
         return bitmapCut;
     }
 
-    protected synchronized void processImage(Bitmap bitmap){
+    protected synchronized void processImage(Bitmap bitmap) {
         runInBackground(
                 new Runnable() {
                     @Override
-                    public void run()
-                    {
-                        if(QUSRunner != null)
-                        {
+                    public void run() {
+                        if (QUSRunner != null) {
                             // get proper transformation matrix
                             Matrix prev2cnn = ImageUtils.getTransformationMatrix(bitmap.getWidth(), bitmap.getHeight(), INPUT_WIDTH, INPUT_HEIGHT, 0, false);
                             bit = Bitmap.createBitmap(INPUT_WIDTH, INPUT_HEIGHT, Bitmap.Config.ARGB_8888); // creates a new bitmap to draw the scaled bitmapCut onto.
                             canvas.setBitmap(bit); // Sets the bitmap to canvas to draw onto
                             canvas.drawBitmap(bitmap, prev2cnn, null); // Draws the scaled version of bitmap onto bit
 // ======================================================================================================================= Run network ========================================================================================================
-                            if(QUSRunner==null){Log.e("Nima","QUALITY RUNNER DELETED!");return;}
+                            if (QUSRunner == null) {
+                                Log.e("Nima", "QUALITY RUNNER DELETED!");
+                                return;
+                            }
                             double initial = System.currentTimeMillis();
                             QUSRunner.scoreImage(bit);
                             GLOBAL.isProcessDone = true;
                             double processTime = System.currentTimeMillis() - initial;
                             Log.i("Nima", "ScoreTime = " + processTime);
-
 // ===================================================================================================================== Sets the results ===================================================================================================
                         }
                     }
                 });
-
-                runInBackground(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        synchronized (results_mtx){
-                            if (res_mean_vec.size() >= FILTER_LENGTH) {
-                                res_mean_vec.remove(0);
-                                res_std_vec.remove(0);
-                            }
-                            res_mean_vec.addElement(lastResults[0]);
-                            res_std_vec.addElement(lastResults[1]);
-
-
-                            //Log.i(TAG,"res size = "+results_vector.size());
-                            for (int i = 0; i < res_mean_vec.size(); i++) {
-                                filt_mean = filt_mean + (float) res_mean_vec.elementAt(i);
-                                filt_std = filt_std + (float) res_std_vec.elementAt(i);
-                            }
-                            filt_mean = filt_mean / FILTER_LENGTH;
-                            filt_std = filt_std / FILTER_LENGTH;
-                        }
-
-
-                }
-        });
-
     }
+//
+//    }
     private void displayResults (float filt_mean, float filt_std){
-        runInBackground(new Runnable() {
-            @Override
-            public void run() {
+                synchronized (results_mtx) {
+                    if (res_mean_vec.size() >= FILTER_LENGTH) {
+                        res_mean_vec.remove(0);
+                        res_std_vec.remove(0);
+                    }
+                    res_mean_vec.addElement(lastResults[0]);
+                    res_std_vec.addElement(lastResults[1]);
+
+//                    float filt_mean = 0, filt_std = 0;
+                    //Log.i(TAG,"res size = "+results_vector.size());
+                    for (int i = 0; i < res_mean_vec.size(); i++) {
+                        filt_mean = filt_mean + (float) res_mean_vec.elementAt(i);
+                        filt_std = filt_std + (float) res_std_vec.elementAt(i);
+                    }
+                    filt_mean = filt_mean / FILTER_LENGTH;
+                    filt_std = filt_std / FILTER_LENGTH;
+                }
                 progressBar.setUncertainProgress(filt_mean, filt_std);
-            }
-        });
-    }
+}
     protected synchronized void runInBackground(final Runnable r) {
         if (handler != null) {                                          // handler.post, posts a message to the handler
             handler.post(r);                                            // .post is used to when you want to run some unknown code on UI thread
        }
     }
 
-    /**
-     * Make bitmap appropriate size, greyscale and inverted. MNIST model is originally teached on
-     * dataset of images 28x28px with white letter written on black background.
-     */
     public void trashLayoutRemove()
     {
         mTrashLayoutBinding.getRoot().setVisibility(View.GONE);
@@ -616,11 +597,8 @@ public class BubbleService extends Service
                 pv = i;
             }
             System.arraycopy(qual_results,0,lastResults,0,2);
-
             //Log.i("Nima","View = "+VIEW_NAMES[pv]+" with a prob of = "+max_prob);
             display_results.setRes1(VIEW_NAMES[pv]);
-            displayResults(filt_mean, filt_std);
         }
     }
-
 }

@@ -28,4 +28,5 @@ public class Results extends BaseObservable {
             notifyPropertyChanged(BR.prog1);
     }
 
+
 }
